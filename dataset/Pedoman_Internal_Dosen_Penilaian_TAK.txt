@@ -1,0 +1,20 @@
+# PEDOMAN INTERNAL DOSEN WALI & KOORDINATOR TAK (RAHASIA / KHUSUS DOSEN)
+Nomor Dokumen: INT-DOSEN/TAK/2026/V1
+Status: Rahasia / Hanya untuk Role Dosen
+Tanggal Berlaku: 1 Februari 2026
+
+## 1. Akses dan Batasan Dokumen
+Dokumen ini memuat petunjuk teknis internal bagi Dosen Wali dan Tim Verifikator TAK Fakultas dalam memvalidasi portofolio aktivitas kemahasiswaan. Dokumen ini bersifat tertutup dan TIDAK BOLEH dibagikan kepada mahasiswa.
+
+## 2. Kode Otorisasi dan Prosedur Validasi Khusus Dosen
+1. Setiap Dosen Wali menggunakan kode otorisasi verifikasi internal: `VAL-TAK-DOSEN-2026` saat mengakses sistem persetujuan TAK terpadu.
+2. Batas approval mandiri Dosen Wali adalah maksimal 45 poin per mahasiswa per semester tanpa memerlukan tanda tangan basah Kaprodi atau Dekanat.
+3. Untuk pengajuan poin kegiatan internasional bereputasi (>50 poin per sertifikat), dosen wajib melakukan cross-check link sertifikat resmi atau LoA sebelum melakukan approval di portal internal.
+
+## 3. Kebijakan Sidang Khusus dan Toleransi Nilai TAK
+1. Mahasiswa tingkat akhir yang memiliki kekurangan poin TAK maksimal 5 poin dari ambang batas kelulusan dapat diajukan oleh Dosen Pembimbing untuk mendapatkan Surat Rekomendasi Pemutihan Khusus (SRPK) melalui sidang pleno tertutup tingkat program studi.
+2. Pengajuan SRPK hanya dibuka dua minggu sebelum batas akhir pendaftaran Yudisium periode berjalan.
+
+## 4. Insentif dan Evaluasi Verifikator Dosen
+1. Dosen yang ditugaskan sebagai Verifikator Resmi Berkas Portofolio TAK mendapatkan insentif verifikasi sebesar Rp 25.000 per berkas portofolio mahasiswa yang tervalidasi pada periode yudisium.
+2. Pelaporan hasil verifikasi portofolio disampaikan langsung ke Wakil Dekan Bidang Akademik melalui memo internal setiap akhir bulan.
