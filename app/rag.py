@@ -389,6 +389,21 @@ def _log_groq_usage(
         pass
 
 
+def is_source_only_request(question: str) -> bool:
+    q = normalize_text(question)
+    source_words = ("sumber", "link", "tautan", "url", "unduh berkas", "download file", "unduh dokumen")
+    has_source = any(w in q for w in source_words)
+    ask_words = ("minta", "mana", "apa", "berikan", "kasih", "tampilkan", "lihat", "kirimkan", "bagi", "share", "ada link")
+    has_ask = any(w in q for w in ask_words)
+    return has_source and has_ask
+
+
+def is_document_request(question: str) -> bool:
+    q = normalize_text(question)
+    doc_words = ("minta dokumen", "minta berkas", "minta file", "lihat dokumen", "isi dokumen", "tampilkan dokumen", "minta pedoman", "dokumen pedoman", "dokumen internal")
+    return any(w in q for w in doc_words)
+
+
 def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[str, Any]]) -> dict[str, Any]:
     if not relevant_chunks:
         if is_greeting_or_smalltalk(question):
@@ -410,6 +425,19 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
         }
 
     sources = get_unique_sources(relevant_chunks)
+
+    # 1. Khusus jika pengguna HANYA meminta sumber atau tautan dokumen
+    if is_source_only_request(question) and sources:
+        doc_bullets = "\n".join(
+            f"- 📄 **[{s['title']}]({s['url']})**" for s in sources
+        )
+        answer = (
+            f"Berikut adalah tautan sumber referensi dokumen yang Anda minta:\n\n"
+            f"{doc_bullets}\n\n"
+            "Anda dapat langsung mengklik tautan dokumen di atas atau kartu Sumber Referensi di bawah untuk membuka dan mengunduh berkas aslinya."
+        )
+        return {"answer": answer, "sources": sources}
+
     context = "\n\n---\n\n".join(
         f"[{c['document_title']}]\n{c['text']}" for c in relevant_chunks
     )
@@ -430,23 +458,28 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
     client = Groq(api_key=api_key)
 
     system_prompt = (
-        f"Kamu adalah Asisten AI Dokumen Akademik untuk role '{role_name}' yang ramah, informatif, dan akurat. "
-        "Tugasmu adalah menjawab pertanyaan pengguna secara langsung dan tuntas berdasarkan referensi informasi yang diberikan. "
-        "PANDUAN MENJAWAB: "
-        "1) Jika pengguna meminta dokumen, pedoman, atau berkas (misalnya 'minta dokumen approval mandiri', 'minta SK TAK', 'aturan penilaian dosen', dll.), "
-        "JELASKAN langsung rincian isi, poin-poin aturan, atau ketentuan dari dokumen yang tersedia pada referensi secara lengkap dan jelas. "
-        "Sampaikan juga bahwa pengguna dapat mengklik kartu Sumber Referensi di bawah untuk melihat isi lengkap atau mengunduh file aslinya. "
-        "2) Jangan menolak dengan mengatakan dokumen tidak tersedia jika informasinya sudah ada pada referensi. "
-        "3) Jika terdapat beberapa versi aturan (misalnya tahun 2022 dan 2025), utamakan ketentuan terbaru (2025) sebagai acuan utama, kecuali diminta perbandingan. "
-        "4) Tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4). "
-        "5) HANYA jika topik yang ditanyakan benar-benar tidak ada sama sekali pada referensi, katakan dengan sopan bahwa informasi tersebut belum tersedia saat ini."
+        f"Kamu adalah Asisten AI Dokumen Akademik untuk role '{role_name}' yang ramah, ringkas, dan akurat. "
+        "PANDUAN MERESPON BERDASARKAN JENIS PERTANYAAN: "
+        "1) JIKA PENGGUNA MEMINTA DOKUMEN (misalnya: 'minta dokumen pedoman internal', 'minta file SK TAK'): "
+        "Berikan PENJELASAN SINGKAT & PADAT (cukup 2-4 poin penting mengenai tujuan dan garis besar dokumen tersebut, JANGAN menjabarkan seluruh pasal/isinya secara panjang lebar). "
+        "2) JIKA PENGGUNA BERTANYA INFORMASI SPESIFIK (misalnya: 'berapa batas approval mandiri?', 'apa kode verifikasi?'): "
+        "Jawab pertanyaan tersebut secara langsung, to-the-point, dan akurat sesuai data referensi. "
+        "3) Tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4). "
+        "4) Jika informasi tidak ada di referensi, katakan dengan sopan bahwa informasi belum tersedia."
     )
 
-    user_prompt = (
-        f"Pertanyaan: {question}\n\n"
-        f"Referensi informasi:\n{context}\n\n"
-        "Jawablah pertanyaan di atas secara langsung, ringkas, dan natural dalam bahasa Indonesia."
-    )
+    if is_document_request(question):
+        user_prompt = (
+            f"Pengguna meminta dokumen: '{question}'.\n\n"
+            f"Referensi informasi:\n{context}\n\n"
+            "TUGAS: Berikan penjelasan singkat (ringkasan 2-4 poin inti tentang dokumen tersebut, jangan dijabarkan seluruh isi dokumen secara panjang lebar)."
+        )
+    else:
+        user_prompt = (
+            f"Pertanyaan: {question}\n\n"
+            f"Referensi informasi:\n{context}\n\n"
+            "Jawablah pertanyaan di atas secara langsung, ringkas, dan natural dalam bahasa Indonesia."
+        )
 
     messages = [
         {"role": "system", "content": system_prompt},
