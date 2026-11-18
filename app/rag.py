@@ -391,11 +391,22 @@ def _log_groq_usage(
 
 def is_source_only_request(question: str) -> bool:
     q = normalize_text(question)
-    source_words = ("sumber", "link", "tautan", "url", "unduh berkas", "download file", "unduh dokumen")
+    short_matches = (
+        "sumber linknya", "sumber link", "sumbernya", "linknya", "mana linknya",
+        "link dokumen", "sumber dokumen", "link berkas", "tautannya", "mana tautannya",
+        "minta sumbernya", "minta linknya", "minta link", "minta sumber", "sumber", "link"
+    )
+    if any(q == s or q.startswith(f"{s} ") or q.endswith(f" {s}") for s in short_matches):
+        if not any(k in q for k in ("pengajuan", "daftar", "pendaftaran", "portal", "website", "form", "formulir")):
+            return True
+
+    source_words = ("sumber", "link", "tautan", "url")
     has_source = any(w in q for w in source_words)
-    ask_words = ("minta", "mana", "apa", "berikan", "kasih", "tampilkan", "lihat", "kirimkan", "bagi", "share", "ada link")
+    ask_words = ("minta", "mana", "apa", "berikan", "kasih", "tampilkan", "lihat", "kirimkan", "bagi", "share", "ada link", "linknya")
     has_ask = any(w in q for w in ask_words)
-    return has_source and has_ask
+    if has_source and has_ask and not any(k in q for k in ("pengajuan", "daftar", "pendaftaran", "portal", "website", "form", "formulir")):
+        return True
+    return False
 
 
 def is_document_request(question: str) -> bool:
@@ -419,7 +430,7 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
             }
         return {
             "answer": (
-                "Maaf, informasi yang Anda tanyakan belum tersedia saat ini."
+                "Berdasarkan dokumen yang tercantum, informasi yang Anda tanyakan tidak tersedia saat ini."
             ),
             "sources": [],
         }
@@ -459,13 +470,16 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
 
     system_prompt = (
         f"Kamu adalah Asisten AI Dokumen Akademik untuk role '{role_name}' yang ramah, ringkas, dan akurat. "
-        "PANDUAN MERESPON BERDASARKAN JENIS PERTANYAAN: "
-        "1) JIKA PENGGUNA MEMINTA DOKUMEN (misalnya: 'minta dokumen pedoman internal', 'minta file SK TAK'): "
+        "PANDUAN GAYA BAHASA & KETENTUAN MENJAWAB: "
+        "1) JANGAN PERNAH menggunakan kata basa-basi permohonan maaf seperti 'Mohon maaf', 'Maaf', atau 'Saya mohon maaf'. "
+        "Langsung jawab to the point secara lugas dan profesional. "
+        "2) Jika informasi atau tautan yang ditanyakan tidak tercantum di referensi, gunakan gaya lugas: "
+        "'Berdasarkan dokumen yang tercantum, informasi mengenai [topik] tidak tersedia.' "
+        "Lalu sebutkan informasi terdekat atau alternatif yang ada di referensi secara to the point. "
+        "3) JIKA PENGGUNA MEMINTA DOKUMEN (misalnya: 'minta dokumen pedoman internal', 'minta file SK TAK'): "
         "Berikan PENJELASAN SINGKAT & PADAT (cukup 2-4 poin penting mengenai tujuan dan garis besar dokumen tersebut, JANGAN menjabarkan seluruh pasal/isinya secara panjang lebar). "
-        "2) JIKA PENGGUNA BERTANYA INFORMASI SPESIFIK (misalnya: 'berapa batas approval mandiri?', 'apa kode verifikasi?'): "
-        "Jawab pertanyaan tersebut secara langsung, to-the-point, dan akurat sesuai data referensi. "
-        "3) Tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4). "
-        "4) Jika informasi tidak ada di referensi, katakan dengan sopan bahwa informasi belum tersedia."
+        "4) Jawab pertanyaan spesifik secara langsung, to-the-point, dan akurat sesuai data referensi tanpa bertele-tele. "
+        "5) Tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4)."
     )
 
     if is_document_request(question):
@@ -521,8 +535,12 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
         raw_answer = (completion.choices[0].message.content or "").strip()
         answer = re.sub(r"<think>.*?</think>", "", raw_answer, flags=re.DOTALL).strip()
         if not answer:
-            answer = "Maaf, tidak ada respons yang dihasilkan oleh model AI."
-        elif sources and any(w in question.lower() for w in ("minta", "unduh", "download", "link", "dokumen", "file", "berkas", "pdf")):
+            answer = "Berdasarkan dokumen yang tercantum, tidak ada respons yang dihasilkan oleh model AI."
+        else:
+            # Ganti kata permohonan maaf dengan gaya to the point
+            answer = re.sub(r"^(?:mohon\s+)?maaf[,\s-]*", "Berdasarkan dokumen yang tercantum, ", answer, flags=re.IGNORECASE)
+
+        if sources and any(w in question.lower() for w in ("minta", "unduh", "download", "link", "dokumen", "file", "berkas", "pdf")):
             answer += f"\n\n📥 **Akses / Unduh Dokumen Asli:** [{sources[0]['title']}]({sources[0]['url']})"
         return {"answer": answer, "sources": sources}
     except Exception as exc:
