@@ -430,16 +430,16 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
     client = Groq(api_key=api_key)
 
     system_prompt = (
-        f"Kamu adalah Asisten AI Dokumen Akademik untuk role '{role_name}' yang ramah, konsisten, dan akurat. "
-        "Jawablah pertanyaan secara langsung hanya berdasarkan informasi referensi yang disediakan, tanpa mengarang fakta baru. "
-        "ATURAN KONSISTENSI: "
-        "1) Jika terdapat beberapa versi aturan (misalnya tahun 2022 dan 2025), utamakan ketentuan terbaru (2025) sebagai acuan utama, kecuali pengguna secara eksplisit meminta perbandingan antar versi. "
-        "2) Jika istilah yang ditanyakan pengguna merujuk pada konsep yang jelas dijelaskan dalam referensi (misalnya 'TAK Wajib' merujuk pada kategori kegiatan wajib TAK), jelaskan langsung definisi dan rinciannya dengan tegas dan konsisten—jangan menyatakan istilah tersebut 'tidak didefinisikan' jika penjelasannya ada di referensi. "
-        "3) PENTING: Jangan pernah menyebut frasa seperti 'berdasarkan dokumen', 'dalam dokumen', 'menurut konteks', 'dokumen yang diberikan', atau merujuk pada kata 'dokumen'/'konteks' dalam jawabanmu. "
-        "Sampaikan informasi seolah-olah itu adalah pengetahuan langsung layanan terkait. "
-        "Jika informasi yang ditanyakan benar-benar tidak tersedia pada referensi, katakan dengan sopan dan singkat bahwa informasi tersebut belum tersedia saat ini. "
-        "Jangan gunakan sintaks LaTeX seperti $...$, $$...$$, \\frac, atau \\times; "
-        "tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4)."
+        f"Kamu adalah Asisten AI Dokumen Akademik untuk role '{role_name}' yang ramah, informatif, dan akurat. "
+        "Tugasmu adalah menjawab pertanyaan pengguna secara langsung dan tuntas berdasarkan referensi informasi yang diberikan. "
+        "PANDUAN MENJAWAB: "
+        "1) Jika pengguna meminta dokumen, pedoman, atau berkas (misalnya 'minta dokumen approval mandiri', 'minta SK TAK', 'aturan penilaian dosen', dll.), "
+        "JELASKAN langsung rincian isi, poin-poin aturan, atau ketentuan dari dokumen yang tersedia pada referensi secara lengkap dan jelas. "
+        "Sampaikan juga bahwa pengguna dapat mengklik kartu Sumber Referensi di bawah untuk melihat isi lengkap atau mengunduh file aslinya. "
+        "2) Jangan menolak dengan mengatakan dokumen tidak tersedia jika informasinya sudah ada pada referensi. "
+        "3) Jika terdapat beberapa versi aturan (misalnya tahun 2022 dan 2025), utamakan ketentuan terbaru (2025) sebagai acuan utama, kecuali diminta perbandingan. "
+        "4) Tuliskan rumus matematika dalam teks biasa yang bersih (contoh: IKK = (Ni / Nm) × 4). "
+        "5) HANYA jika topik yang ditanyakan benar-benar tidak ada sama sekali pada referensi, katakan dengan sopan bahwa informasi tersebut belum tersedia saat ini."
     )
 
     user_prompt = (
@@ -489,6 +489,8 @@ def generate_answer(question: str, role_name: str, relevant_chunks: list[dict[st
         answer = re.sub(r"<think>.*?</think>", "", raw_answer, flags=re.DOTALL).strip()
         if not answer:
             answer = "Maaf, tidak ada respons yang dihasilkan oleh model AI."
+        elif sources and any(w in question.lower() for w in ("minta", "unduh", "download", "link", "dokumen", "file", "berkas", "pdf")):
+            answer += f"\n\n📥 **Akses / Unduh Dokumen Asli:** [{sources[0]['title']}]({sources[0]['url']})"
         return {"answer": answer, "sources": sources}
     except Exception as exc:
         err_headers = getattr(getattr(exc, "response", None), "headers", None)
